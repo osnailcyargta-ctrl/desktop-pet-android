@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="200dp"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center">
+
+        <com.desktoppet.app.PetDrawView
+            android:id="@+id/pet_draw"
+            android:layout_width="140dp"
+            android:layout_height="140dp"/>
+
+        <View
+            android:id="@+id/pet_body"
+            android:layout_width="140dp"
+            android:layout_height="140dp"
+            android:layout_marginTop="-140dp"/>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="4dp">
+
+            <Button
+                android:id="@+id/btn_feed"
+                android:layout_width="44dp"
+                android:layout_height="32dp"
+                android:text="Feed"
+                android:textSize="9sp"
+                android:padding="2dp"
+                android:backgroundTint="#FF9ECD"
+                android:textColor="#FFFFFF"/>
+
+            <Button
+                android:id="@+id/btn_drink"
+                android:layout_width="44dp"
+                android:layout_height="32dp"
+                android:text="Drink"
+                android:textSize="9sp"
+                android:padding="2dp"
+                android:backgroundTint="#87CEEB"
+                android:textColor="#FFFFFF"
+                android:layout_marginStart="4dp"/>
+
+            <Button
+                android:id="@+id/btn_sleep"
+                android:layout_width="44dp"
+                android:layout_height="32dp"
+                android:text="Sleep"
+                android:textSize="9sp"
+                android:padding="2dp"
+                android:backgroundTint="#B0C4DE"
+                android:textColor="#FFFFFF"
+                android:layout_marginStart="4dp"/>
+
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>
