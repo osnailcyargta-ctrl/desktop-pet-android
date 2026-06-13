@@ -1,25 +1,143 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:gravity="center"
-    android:orientation="vertical"
-    android:background="#1A1A2E">
+    android:background="#0D0D0F">
 
-    <TextView
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Desktop Pet"
-        android:textColor="#FF9ECD"
-        android:textSize="28sp"
-        android:textStyle="bold"/>
+        android:orientation="vertical"
+        android:padding="24dp">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Launching your pet..."
-        android:textColor="#AAAAAA"
-        android:textSize="14sp"
-        android:layout_marginTop="12dp"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Desktop Pet"
+            android:textColor="#FFFFFF"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:fontFamily="sans-serif-medium"
+            android:layout_marginBottom="4dp"/>
 
-</LinearLayout>
+        <TextView
+            android:id="@+id/tv_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Pet: Stopped"
+            android:textColor="#888888"
+            android:textSize="13sp"
+            android:layout_marginBottom="28dp"/>
+
+        <!-- Pet Preview -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="PET IMAGE"
+            android:textColor="#555555"
+            android:textSize="11sp"
+            android:letterSpacing="0.15"
+            android:layout_marginBottom="10dp"/>
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="200dp"
+            android:background="#1A1A1E"
+            android:layout_marginBottom="12dp">
+            <ImageView
+                android:id="@+id/pet_preview"
+                android:layout_width="160dp"
+                android:layout_height="160dp"
+                android:layout_gravity="center"
+                android:scaleType="centerCrop"/>
+        </FrameLayout>
+
+        <Button
+            android:id="@+id/btn_change_image"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="Change Pet Image"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#1E1E22"
+            android:textSize="14sp"
+            android:layout_marginBottom="28dp"/>
+
+        <!-- Mode -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="PET BEHAVIOR"
+            android:textColor="#555555"
+            android:textSize="11sp"
+            android:letterSpacing="0.15"
+            android:layout_marginBottom="12dp"/>
+
+        <RadioGroup
+            android:id="@+id/mode_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginBottom="28dp">
+
+            <RadioButton
+                android:id="@+id/radio_idle"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:text="Idle — just sit there"
+                android:textColor="#DDDDDD"
+                android:textSize="15sp"
+                android:buttonTint="#FFFFFF"
+                android:background="#1A1A1E"
+                android:paddingStart="16dp"
+                android:layout_marginBottom="6dp"
+                android:checked="true"/>
+
+            <RadioButton
+                android:id="@+id/radio_walk"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:text="Walk — move around screen"
+                android:textColor="#DDDDDD"
+                android:textSize="15sp"
+                android:buttonTint="#FFFFFF"
+                android:background="#1A1A1E"
+                android:paddingStart="16dp"
+                android:layout_marginBottom="6dp"/>
+
+            <RadioButton
+                android:id="@+id/radio_sleep"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:text="Sleep — wakes at volume &gt; 30%"
+                android:textColor="#DDDDDD"
+                android:textSize="15sp"
+                android:buttonTint="#FFFFFF"
+                android:background="#1A1A1E"
+                android:paddingStart="16dp"/>
+
+        </RadioGroup>
+
+        <!-- Buttons -->
+        <Button
+            android:id="@+id/btn_launch"
+            android:layout_width="match_parent"
+            android:layout_height="54dp"
+            android:text="Launch Pet"
+            android:textColor="#000000"
+            android:backgroundTint="#FFFFFF"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="10dp"/>
+
+        <Button
+            android:id="@+id/btn_stop"
+            android:layout_width="match_parent"
+            android:layout_height="54dp"
+            android:text="Stop Pet"
+            android:textColor="#FF4444"
+            android:backgroundTint="#1A1A1E"
+            android:textSize="15sp"
+            android:enabled="false"/>
+
+    </LinearLayout>
+</ScrollView>
