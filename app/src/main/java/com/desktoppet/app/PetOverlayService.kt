@@ -4,11 +4,13 @@ import android.app.*
 import android.content.Context
 import android.content.Intent
 import android.graphics.*
+import android.graphics.drawable.BitmapDrawable
 import android.media.AudioManager
 import android.os.*
 import android.view.*
 import android.widget.*
 import androidx.core.app.NotificationCompat
+import java.io.File
 
 class PetOverlayService : Service() {
 
@@ -18,9 +20,11 @@ class PetOverlayService : Service() {
     private lateinit var audioManager: AudioManager
     private lateinit var handler: Handler
 
-    private var petState = "idle" // idle, eating, drinking, sleeping
-    private var isSleeping = false
-    private var volumeCheckRunnable: Runnable? = null
+    private var petMode = "idle"
+    private var walkDir = 1
+    private var walkRunnable: Runnable? = null
+    private var volumeRunnable: Runnable? = null
+    private var bounceUp = true
 
     override fun onBind(intent: Intent?) = null
 
@@ -29,131 +33,142 @@ class PetOverlayService : Service() {
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
         audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
         handler = Handler(Looper.getMainLooper())
-
         createNotificationChannel()
         startForeground(1, buildNotification())
-        createPetOverlay()
-        startVolumeCheck()
+        createOverlay()
     }
 
-    private fun createPetOverlay() {
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val prefs = getSharedPreferences(MainActivity.PREFS, Context.MODE_PRIVATE)
+        petMode = prefs.getString(MainActivity.KEY_PET_MODE, "idle") ?: "idle"
+        updateBehavior()
+        return START_STICKY
+    }
+
+    private fun createOverlay() {
         val inflater = getSystemService(LAYOUT_INFLATER_SERVICE) as LayoutInflater
         petView = inflater.inflate(R.layout.pet_overlay, null)
 
         params = WindowManager.LayoutParams(
-            200, 200,
+            180, 220,
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-            else
-                WindowManager.LayoutParams.TYPE_PHONE,
+            else WindowManager.LayoutParams.TYPE_PHONE,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            x = 100
-            y = 300
+            x = 100; y = 300
         }
 
         windowManager.addView(petView, params)
+        loadPetImage()
         setupDrag()
-        setupButtons()
-        updatePetVisual()
+        setupCloseButton()
+        updateBehavior()
+    }
+
+    private fun loadPetImage() {
+        val prefs = getSharedPreferences(MainActivity.PREFS, Context.MODE_PRIVATE)
+        val path = prefs.getString(MainActivity.KEY_PET_IMAGE, null)
+        val imgView = petView.findViewById<ImageView>(R.id.pet_image)
+        if (path != null && File(path).exists()) {
+            imgView.setImageBitmap(android.graphics.BitmapFactory.decodeFile(path))
+        } else {
+            imgView.setImageResource(R.drawable.default_pet)
+        }
     }
 
     private fun setupDrag() {
-        val petBody = petView.findViewById<View>(R.id.pet_body)
-        var lastX = 0f
-        var lastY = 0f
-
-        petBody.setOnTouchListener { _, event ->
+        val petImg = petView.findViewById<View>(R.id.pet_image)
+        var lastX = 0f; var lastY = 0f
+        petImg.setOnTouchListener { _, event ->
             when (event.action) {
-                MotionEvent.ACTION_DOWN -> {
-                    lastX = event.rawX
-                    lastY = event.rawY
-                    true
-                }
+                MotionEvent.ACTION_DOWN -> { lastX = event.rawX; lastY = event.rawY; true }
                 MotionEvent.ACTION_MOVE -> {
-                    val dx = (event.rawX - lastX).toInt()
-                    val dy = (event.rawY - lastY).toInt()
-                    params.x += dx
-                    params.y += dy
+                    params.x += (event.rawX - lastX).toInt()
+                    params.y += (event.rawY - lastY).toInt()
                     windowManager.updateViewLayout(petView, params)
-                    lastX = event.rawX
-                    lastY = event.rawY
-                    true
+                    lastX = event.rawX; lastY = event.rawY; true
                 }
                 else -> false
             }
         }
     }
 
-    private fun setupButtons() {
-        petView.findViewById<View>(R.id.btn_feed)?.setOnClickListener {
-            if (!isSleeping) {
-                petState = "eating"
-                updatePetVisual()
-                handler.postDelayed({ petState = "idle"; updatePetVisual() }, 2000)
-            }
-        }
-        petView.findViewById<View>(R.id.btn_drink)?.setOnClickListener {
-            if (!isSleeping) {
-                petState = "drinking"
-                updatePetVisual()
-                handler.postDelayed({ petState = "idle"; updatePetVisual() }, 2000)
-            }
-        }
-        petView.findViewById<View>(R.id.btn_sleep)?.setOnClickListener {
-            isSleeping = !isSleeping
-            petState = if (isSleeping) "sleeping" else "idle"
-            updatePetVisual()
+    private fun setupCloseButton() {
+        petView.findViewById<View>(R.id.btn_close)?.setOnClickListener {
+            stopSelf()
         }
     }
 
-    private fun updatePetVisual() {
-        val petBody = petView.findViewById<PetDrawView>(R.id.pet_draw)
-        petBody?.setState(petState)
-        petBody?.invalidate()
+    private fun updateBehavior() {
+        walkRunnable?.let { handler.removeCallbacks(it) }
+        volumeRunnable?.let { handler.removeCallbacks(it) }
+
+        val overlay = petView.findViewById<View>(R.id.sleep_overlay)
+        overlay?.visibility = if (petMode == "sleep") View.VISIBLE else View.GONE
+
+        when (petMode) {
+            "walk" -> startWalking()
+            "sleep" -> startSleepMonitor()
+        }
     }
 
-    private fun startVolumeCheck() {
-        volumeCheckRunnable = object : Runnable {
+    private fun startWalking() {
+        val display = windowManager.defaultDisplay
+        val metrics = android.util.DisplayMetrics()
+        display.getMetrics(metrics)
+        val screenW = metrics.widthPixels
+
+        walkRunnable = object : Runnable {
             override fun run() {
-                if (isSleeping) {
-                    val maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-                    val curVol = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-                    val pct = (curVol.toFloat() / maxVol) * 100
-                    if (pct > 30f) {
-                        handler.postDelayed({
-                            isSleeping = false
-                            petState = "idle"
-                            updatePetVisual()
-                        }, 4000)
-                    }
+                params.x += walkDir * 4
+                if (params.x <= 0) { params.x = 0; walkDir = 1 }
+                if (params.x >= screenW - 180) { params.x = screenW - 180; walkDir = -1 }
+                if (bounceUp) params.y -= 2 else params.y += 2
+                bounceUp = !bounceUp
+                windowManager.updateViewLayout(petView, params)
+                handler.postDelayed(this, 30)
+            }
+        }
+        handler.post(walkRunnable!!)
+    }
+
+    private fun startSleepMonitor() {
+        volumeRunnable = object : Runnable {
+            override fun run() {
+                val max = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+                val cur = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+                if ((cur.toFloat() / max) * 100 > 30f) {
+                    handler.postDelayed({
+                        petMode = "idle"
+                        updateBehavior()
+                    }, 4000)
                 }
                 handler.postDelayed(this, 1000)
             }
         }
-        handler.post(volumeCheckRunnable!!)
+        handler.post(volumeRunnable!!)
     }
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel("pet_channel", "Desktop Pet", NotificationManager.IMPORTANCE_LOW)
-            getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+            val ch = NotificationChannel("pet_ch", "Desktop Pet", NotificationManager.IMPORTANCE_LOW)
+            getSystemService(NotificationManager::class.java).createNotificationChannel(ch)
         }
     }
 
-    private fun buildNotification(): Notification {
-        return NotificationCompat.Builder(this, "pet_channel")
-            .setContentTitle("Desktop Pet")
-            .setContentText("Your pet is on screen")
-            .setSmallIcon(android.R.drawable.ic_menu_myplaces)
-            .build()
-    }
+    private fun buildNotification() = NotificationCompat.Builder(this, "pet_ch")
+        .setContentTitle("Desktop Pet")
+        .setContentText("Your pet is running")
+        .setSmallIcon(android.R.drawable.ic_menu_myplaces)
+        .build()
 
     override fun onDestroy() {
         super.onDestroy()
-        volumeCheckRunnable?.let { handler.removeCallbacks(it) }
+        walkRunnable?.let { handler.removeCallbacks(it) }
+        volumeRunnable?.let { handler.removeCallbacks(it) }
         if (::petView.isInitialized) windowManager.removeView(petView)
     }
 }
